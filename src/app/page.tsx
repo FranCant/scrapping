@@ -64,11 +64,11 @@ export default function Home() {
       </form>
       {loading && <p>Loading...</p>}
       {error && <p className="text-red-500">{error}</p>}
-      {data.length > 0 && (
+      {data?.length > 0 && (
         <div className="mt-4">
-          <h2>Results {data.length}</h2>
+          <h2>Results {data?.length}</h2>
           <ul className="text-white flex flex-col gap-4">
-            {data.map((item, index) => (
+            {data?.map((item, index) => (
               <li
                 key={index}
                 className="flex items-center gap-4 rounded-md bg-gray-800 p-4"
