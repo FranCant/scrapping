@@ -25,14 +25,20 @@ export async function GET(req: NextRequest) {
     const $ = cheerio.load(html);
 
     // Extraer datos de todos los productos del DOM de la página
-    const products = $(".js-product-miniature-wrapper")
+    const products = $(".js-product-miniature-wrapper, .item-area")
       .map((_, product) => {
-        const title = $(product).find(".product-title").text().trim() || "";
+        const title =
+          $(product).find(".product-title, .product-name").text().trim() || "";
         const reference =
-          $(product).find(".product-reference").text().trim() || "";
+          $(product)
+            .find(".product-reference, .old-price .price")
+            .text()
+            .trim() || "";
         const price =
-          $(product).find(".product-price-and-shipping span").text().trim() ||
-          "";
+          $(product)
+            .find(".product-price-and-shipping span, .special-price .price")
+            .text()
+            .trim() || "";
         return { title, reference, price };
       })
       .get();
