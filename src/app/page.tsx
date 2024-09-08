@@ -1,14 +1,12 @@
 "use client";
 import axios from "axios";
 import { useState } from "react";
-import { parse } from "json2csv"; // Necesitarás instalar json2csv
 
 export default function Home() {
   const [inputValue, setInputValue] = useState("");
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [csvUrl, setCsvUrl] = useState<string | null>(null);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -27,15 +25,6 @@ export default function Home() {
 
       // Guardar los datos en el estado
       setData(response.data.data);
-
-      // Crear el contenido CSV
-      const csvContent = parse(response.data.data);
-
-      // Crear una URL para el archivo CSV y guardarla en el estado
-      const url = window.URL.createObjectURL(
-        new Blob([csvContent], { type: "text/csv" })
-      );
-      setCsvUrl(url);
     } catch (err) {
       setError("Error fetching data");
     } finally {
@@ -75,9 +64,9 @@ export default function Home() {
       </form>
       {loading && <p>Loading...</p>}
       {error && <p className="text-red-500">{error}</p>}
-      {data?.length > 0 && (
+      {data.length > 0 && (
         <div className="mt-4">
-          <h2>Results {data && data?.length}</h2>
+          <h2>Results {data.length}</h2>
           <ul className="text-white flex flex-col gap-4">
             {data.map((item, index) => (
               <li
@@ -90,17 +79,6 @@ export default function Home() {
               </li>
             ))}
           </ul>
-          {csvUrl && (
-            <div className="mt-4">
-              <a
-                href={csvUrl}
-                download="products.csv"
-                className="bg-green-600 text-white px-4 py-2 rounded-md"
-              >
-                Download CSV
-              </a>
-            </div>
-          )}
         </div>
       )}
     </div>
