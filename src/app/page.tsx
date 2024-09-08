@@ -1,31 +1,41 @@
 "use client";
 import axios from "axios";
 import { useState } from "react";
+import { parse } from "json2csv"; // Necesitarás instalar json2csv
 
 export default function Home() {
   const [inputValue, setInputValue] = useState("");
-  const [data, setData] = useState<any>(null); // Cambiado a `any` para tipos flexibles
+  const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [csvPath, setCsvPath] = useState<string | null>(null);
+  const [csvUrl, setCsvUrl] = useState<string | null>(null);
 
   const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault(); // Prevenir la recarga de la página
+    event.preventDefault();
 
     setLoading(true);
     setError(null);
 
     try {
+      // Solicitar los datos en formato JSON
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/scrapping`,
         {
-          params: {
-            url: inputValue,
-          },
+          params: { url: inputValue },
         }
       );
-      setData(response?.data?.data);
-      setCsvPath(response?.data?.csvPath); // Guardar la ruta del CSV
+
+      // Guardar los datos en el estado
+      setData(response.data.data);
+
+      // Crear el contenido CSV
+      const csvContent = parse(response.data.data);
+
+      // Crear una URL para el archivo CSV y guardarla en el estado
+      const url = window.URL.createObjectURL(
+        new Blob([csvContent], { type: "text/csv" })
+      );
+      setCsvUrl(url);
     } catch (err) {
       setError("Error fetching data");
     } finally {
@@ -34,7 +44,7 @@ export default function Home() {
   };
 
   return (
-    <div className="flex items-center flex-col justify-items-center min-h-screen pb-10 gap-4 sm:p-14 font-[family-name:var(--font-geist-sans)]">
+    <div className="flex items-center flex-col justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
       <h1>Scraping</h1>
       <form onSubmit={handleSubmit}>
         <div>
@@ -65,26 +75,25 @@ export default function Home() {
       </form>
       {loading && <p>Loading...</p>}
       {error && <p className="text-red-500">{error}</p>}
-      {data && (
+      {data.length > 0 && (
         <div className="mt-4">
           <h2>Results {data.length}</h2>
           <ul className="text-white flex flex-col gap-4">
-            {data.length > 0 &&
-              data?.map((item: any, index: number) => (
-                <li
-                  key={index}
-                  className="flex items-center gap-4 rounded-md bg-gray-800 p-4"
-                >
-                  <strong>Title:</strong> {item.title} <br />
-                  <strong>Reference:</strong> {item.reference} <br />
-                  <strong>Price:</strong> {item.price}
-                </li>
-              ))}
+            {data.map((item, index) => (
+              <li
+                key={index}
+                className="flex items-center gap-4 rounded-md bg-gray-800 p-4"
+              >
+                <strong>Title:</strong> {item.title} <br />
+                <strong>Reference:</strong> {item.reference} <br />
+                <strong>Price:</strong> {item.price}
+              </li>
+            ))}
           </ul>
-          {csvPath && (
+          {csvUrl && (
             <div className="mt-4">
               <a
-                href={csvPath}
+                href={csvUrl}
                 download="products.csv"
                 className="bg-green-600 text-white px-4 py-2 rounded-md"
               >

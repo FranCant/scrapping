@@ -1,65 +1,54 @@
 import { NextRequest, NextResponse } from "next/server";
-import axios from "axios";
-import fs from "fs";
-import path from "path";
-
-const SCRAPER_API_KEY = "8e7eeb199e46d97955e1f4d55bab99c1"; // Tu API Key de ScraperAPI
+import puppeteer from "puppeteer";
 
 export async function GET(req: NextRequest) {
   const urlParams = req.nextUrl.searchParams.get("url");
 
+  let browser;
   try {
-    if (!urlParams) {
-      return NextResponse.json({
-        message: "No URL provided",
-        status: 400,
-      });
-    }
-
-    // Realizar la solicitud a ScraperAPI
-    const response = await axios.get(`http://api.scraperapi.com`, {
-      params: {
-        api_key: SCRAPER_API_KEY,
-        url: urlParams,
-      },
+    // Lanzar una instancia de Puppeteer
+    browser = await puppeteer.launch({
+      headless: true,
     });
 
-    const html = response.data;
+    const page = await browser.newPage();
+    await page.goto(urlParams ?? "", {
+      waitUntil: "networkidle2",
+    });
 
-    // Extraer datos de todos los productos del HTML de la página
-    const productData = extractProductData(html);
+    // Extraer datos de todos los productos del DOM de la página
+    const products = await page.evaluate(() => {
+      const productElements = document.querySelectorAll(
+        ".js-product-miniature-wrapper"
+      );
 
-    // Crear el contenido CSV
-    const csvHeader = "Title,Reference,Price\n";
-    const csvRows = productData
-      .map(
-        (product) =>
-          `"${product.title?.replace(
-            /"/g,
-            '""'
-          )}", "${product.reference?.replace(
-            /"/g,
-            '""'
-          )}", "${product.price?.replace(/"/g, '""')}"`
-      )
-      .join("\n");
+      const productData = Array.from(productElements).map((product) => {
+        const title = product
+          .querySelector(".product-title")
+          ?.textContent?.trim();
+        const reference = product
+          .querySelector(".product-reference")
+          ?.textContent?.trim();
+        const price = product
+          .querySelector(".product-price-and-shipping span")
+          ?.textContent?.trim();
 
-    const csvContent = csvHeader + csvRows;
+        return { title, reference, price };
+      });
 
-    // Guardar los productos en un archivo CSV
-    const csvPath = path.join(process.cwd(), "/src/assets", "products.csv"); // Ruta donde se guardará el CSV
-    fs.writeFileSync(csvPath, csvContent);
+      return productData;
+    });
 
-    console.log("CSV file was written successfully");
+    // Cerrar el navegador
+    await browser.close();
 
-    // Responder al cliente con la ruta del archivo CSV
+    // Responder con los datos JSON
     return NextResponse.json({
-      message: "Datos obtenidos y guardados en CSV exitosamente",
-      status: 200,
-      data: productData,
-      csvPath: "/products.csv", // Ruta pública del CSV
+      message: "Data successfully scraped",
+      data: products,
     });
   } catch (error) {
+    if (browser) await browser.close();
     console.error("Error scraping the site:", error.message);
 
     return NextResponse.json({
@@ -67,27 +56,4 @@ export async function GET(req: NextRequest) {
       status: 500,
     });
   }
-}
-
-// Función para extraer datos del HTML
-function extractProductData(html: string) {
-  // Aquí deberías usar una librería para parsear el HTML, como `cheerio`
-  // Instala cheerio si no lo tienes: npm install cheerio
-  const cheerio = require("cheerio");
-  const $ = cheerio.load(html);
-
-  const products = $(".js-product-miniature-wrapper")
-    .map((index, element) => {
-      const title = $(element).find(".product-title").text().trim();
-      const reference = $(element).find(".product-reference").text().trim();
-      const price = $(element)
-        .find(".product-price-and-shipping span")
-        .text()
-        .trim();
-
-      return { title, reference, price };
-    })
-    .get();
-
-  return products;
 }
