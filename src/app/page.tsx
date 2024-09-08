@@ -15,11 +15,14 @@ export default function Home() {
     setError(null);
 
     try {
-      const response = await axios.get("http://localhost:3000/api/scrapping", {
-        params: {
-          url: inputValue,
-        },
-      });
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/scrapping`,
+        {
+          params: {
+            url: inputValue,
+          },
+        }
+      );
       setData(response?.data?.data);
     } catch (err) {
       setError("Error fetching data");
