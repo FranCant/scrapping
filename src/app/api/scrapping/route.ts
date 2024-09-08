@@ -3,7 +3,6 @@ import puppeteer from "puppeteer";
 
 export async function GET(req: NextRequest) {
   const urlParams = req.nextUrl.searchParams.get("url");
-  const apiKey = "8e7eeb199e46d97955e1f4d55bab99c1"; // Reemplaza con tu API Key de ScraperAPI
 
   let browser;
   try {
@@ -13,12 +12,9 @@ export async function GET(req: NextRequest) {
     });
 
     const page = await browser.newPage();
-    await page.goto(
-      `http://api.scraperapi.com?api_key=${apiKey}&url=${urlParams}`,
-      {
-        waitUntil: "networkidle2",
-      }
-    );
+    await page.goto(urlParams ?? "", {
+      waitUntil: "networkidle2",
+    });
 
     // Extraer datos de todos los productos del DOM de la página
     const products = await page.evaluate(() => {
