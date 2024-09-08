@@ -7,6 +7,7 @@ export default function Home() {
   const [data, setData] = useState<any>(null); // Cambiado a `any` para tipos flexibles
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [csvPath, setCsvPath] = useState<string | null>(null);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault(); // Prevenir la recarga de la página
@@ -24,6 +25,7 @@ export default function Home() {
         }
       );
       setData(response?.data?.data);
+      setCsvPath(response?.data?.csvPath); // Guardar la ruta del CSV
     } catch (err) {
       setError("Error fetching data");
     } finally {
@@ -32,7 +34,7 @@ export default function Home() {
   };
 
   return (
-    <div className="flex items-center flex-col justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
+    <div className="flex items-center flex-col justify-items-center min-h-screen pb-10 gap-4 sm:p-14 font-[family-name:var(--font-geist-sans)]">
       <h1>Scraping</h1>
       <form onSubmit={handleSubmit}>
         <div>
@@ -79,6 +81,17 @@ export default function Home() {
                 </li>
               ))}
           </ul>
+          {csvPath && (
+            <div className="mt-4">
+              <a
+                href={csvPath}
+                download="products.csv"
+                className="bg-green-600 text-white px-4 py-2 rounded-md"
+              >
+                Download CSV
+              </a>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -1,53 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
-import puppeteer from "puppeteer";
+import axios from "axios";
 import fs from "fs";
 import path from "path";
+
+const SCRAPER_API_KEY = "8e7eeb199e46d97955e1f4d55bab99c1"; // Tu API Key de ScraperAPI
 
 export async function GET(req: NextRequest) {
   const urlParams = req.nextUrl.searchParams.get("url");
 
-  let browser;
   try {
-    // Lanzar una instancia de Puppeteer
-    browser = await puppeteer.launch({
-      headless: true, // Cambia a false si quieres ver la interacción en el navegador
-    });
-
-    const page = await browser.newPage();
-    await page.goto(urlParams ?? "", {
-      waitUntil: "networkidle2", // Esperar hasta que la página haya terminado de cargar
-    });
-
-    // Extraer datos de todos los productos del DOM de la página
-    const products = await page.evaluate(() => {
-      const productElements = document.querySelectorAll(
-        ".js-product-miniature-wrapper"
-      ); // Seleccionar todos los contenedores de producto
-
-      // Recorrer todos los productos y extraer la información
-      const productData = Array.from(productElements).map((product) => {
-        const title = product
-          .querySelector(".product-title")
-          ?.textContent?.trim();
-        const reference = product
-          .querySelector(".product-reference")
-          ?.textContent?.trim();
-        const price = product
-          .querySelector(".product-price-and-shipping span")
-          ?.textContent?.trim();
-
-        return { title, reference, price };
+    if (!urlParams) {
+      return NextResponse.json({
+        message: "No URL provided",
+        status: 400,
       });
+    }
 
-      return productData; // Devolver un array con todos los productos
+    // Realizar la solicitud a ScraperAPI
+    const response = await axios.get(`http://api.scraperapi.com`, {
+      params: {
+        api_key: SCRAPER_API_KEY,
+        url: urlParams,
+      },
     });
 
-    // Cerrar el navegador
-    await browser.close();
+    const html = response.data;
+
+    // Extraer datos de todos los productos del HTML de la página
+    const productData = extractProductData(html);
 
     // Crear el contenido CSV
     const csvHeader = "Title,Reference,Price\n";
-    const csvRows = products
+    const csvRows = productData
       .map(
         (product) =>
           `"${product.title?.replace(
@@ -72,11 +56,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       message: "Datos obtenidos y guardados en CSV exitosamente",
       status: 200,
-      data: products,
-      csvPath: "/public/products.csv", // Ruta pública del CSV
+      data: productData,
+      csvPath: "/products.csv", // Ruta pública del CSV
     });
   } catch (error) {
-    if (browser) await browser.close(); // Asegurarse de cerrar el navegador en caso de error
     console.error("Error scraping the site:", error.message);
 
     return NextResponse.json({
@@ -84,4 +67,27 @@ export async function GET(req: NextRequest) {
       status: 500,
     });
   }
+}
+
+// Función para extraer datos del HTML
+function extractProductData(html: string) {
+  // Aquí deberías usar una librería para parsear el HTML, como `cheerio`
+  // Instala cheerio si no lo tienes: npm install cheerio
+  const cheerio = require("cheerio");
+  const $ = cheerio.load(html);
+
+  const products = $(".js-product-miniature-wrapper")
+    .map((index, element) => {
+      const title = $(element).find(".product-title").text().trim();
+      const reference = $(element).find(".product-reference").text().trim();
+      const price = $(element)
+        .find(".product-price-and-shipping span")
+        .text()
+        .trim();
+
+      return { title, reference, price };
+    })
+    .get();
+
+  return products;
 }
